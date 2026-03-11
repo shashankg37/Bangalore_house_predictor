@@ -2,186 +2,232 @@ import streamlit as st
 import pickle
 import json
 import numpy as np
+import warnings
+warnings.filterwarnings('ignore')
 
-# ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Bengaluru House Price Predictor",
     page_icon="🏠",
     layout="centered"
 )
 
-# ── Custom CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
+/* ── global ── */
 html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans', sans-serif !important;
 }
-
 .stApp {
-    background: #0b0f1a;
+    background: #0b0f1a !important;
 }
 
-.hero {
-    text-align: center;
-    padding: 2.5rem 1rem 1.5rem;
+/* ── hide streamlit chrome ── */
+footer, #MainMenu, header { visibility: hidden; }
+
+/* ── main container padding for mobile ── */
+.block-container {
+    padding: 1.5rem 1rem 2rem 1rem !important;
+    max-width: 680px !important;
 }
 
-.hero h1 {
+/* ── hero title ── */
+.hero-title {
     font-family: 'Syne', sans-serif;
-    font-size: 2.8rem;
+    font-size: clamp(1.75rem, 7vw, 2.8rem);
     font-weight: 800;
     color: #ffffff;
-    line-height: 1.1;
-    margin-bottom: 0.4rem;
-}
-
-.hero h1 span {
-    color: #f97316;
-}
-
-.hero p {
-    color: #94a3b8;
-    font-size: 1rem;
-    font-weight: 300;
-}
-
-.card {
-    background: #111827;
-    border: 1px solid #1f2937;
-    border-radius: 16px;
-    padding: 2rem;
-    margin: 1.5rem 0;
-}
-
-.result-box {
-    background: linear-gradient(135deg, #1a1f2e 0%, #0f172a 100%);
-    border: 1px solid #f97316;
-    border-radius: 16px;
-    padding: 2rem;
+    line-height: 1.15;
     text-align: center;
-    margin-top: 1.5rem;
+    margin-bottom: 0.3rem;
 }
-
-.result-box .label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.85rem;
-    color: #94a3b8;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-}
-
-.result-box .price {
-    font-family: 'Syne', sans-serif;
-    font-size: 3.2rem;
-    font-weight: 800;
-    color: #f97316;
-    line-height: 1;
-}
-
-.result-box .sub {
-    font-size: 0.9rem;
+.hero-title span { color: #f97316; }
+.hero-sub {
+    text-align: center;
     color: #64748b;
-    margin-top: 0.5rem;
+    font-size: clamp(0.78rem, 2.5vw, 0.92rem);
+    margin-bottom: 1.8rem;
 }
 
-.stat-row {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
-}
-
-.stat {
-    flex: 1;
-    background: #1f2937;
-    border-radius: 10px;
-    padding: 0.8rem 1rem;
-    text-align: center;
-}
-
-.stat .s-val {
-    font-family: 'Syne', sans-serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #e2e8f0;
-}
-
-.stat .s-label {
+/* ── section label ── */
+.section-label {
+    color: #94a3b8;
     font-size: 0.75rem;
-    color: #64748b;
-    margin-top: 2px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    margin-top: 1.25rem;
 }
 
-.divider {
-    border: none;
-    border-top: 1px solid #1f2937;
-    margin: 1.5rem 0;
-}
-
-/* Streamlit widget overrides */
-label {
+/* ── streamlit widget text ── */
+label, .stSelectbox label, .stNumberInput label {
     color: #cbd5e1 !important;
     font-size: 0.875rem !important;
     font-weight: 500 !important;
 }
 
+/* ── selectbox ── */
 .stSelectbox > div > div {
-    background: #1f2937 !important;
-    border: 1px solid #374151 !important;
-    border-radius: 10px !important;
+    background-color: #1e2433 !important;
+    border: 1.5px solid #2d3748 !important;
+    border-radius: 12px !important;
     color: #e2e8f0 !important;
+    min-height: 48px !important;
+}
+.stSelectbox > div > div:focus-within {
+    border-color: #f97316 !important;
+    box-shadow: 0 0 0 2px rgba(249,115,22,0.2) !important;
 }
 
-.stSlider > div {
+/* ── number input ── */
+.stNumberInput > div > div > input {
+    background-color: #1e2433 !important;
+    border: 1.5px solid #2d3748 !important;
+    border-radius: 12px !important;
     color: #e2e8f0 !important;
+    font-size: 1rem !important;
+    min-height: 48px !important;
+    padding: 0 1rem !important;
+}
+.stNumberInput > div > div > input:focus {
+    border-color: #f97316 !important;
+    box-shadow: 0 0 0 2px rgba(249,115,22,0.2) !important;
+}
+.stNumberInput button {
+    background: #2d3748 !important;
+    border: none !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
 }
 
+/* ── predict button ── */
 .stButton > button {
-    width: 100%;
-    background: #f97316 !important;
+    width: 100% !important;
+    background: linear-gradient(135deg, #f97316, #ea580c) !important;
     color: #ffffff !important;
     font-family: 'Syne', sans-serif !important;
     font-weight: 700 !important;
-    font-size: 1rem !important;
+    font-size: 1.05rem !important;
     border: none !important;
-    border-radius: 12px !important;
-    padding: 0.75rem 2rem !important;
-    letter-spacing: 0.03em !important;
-    transition: all 0.2s !important;
-    margin-top: 0.5rem;
+    border-radius: 14px !important;
+    padding: 0.85rem !important;
+    min-height: 52px !important;
+    letter-spacing: 0.04em !important;
+    margin-top: 1.25rem !important;
+    transition: opacity 0.2s, transform 0.1s !important;
+    box-shadow: 0 4px 20px rgba(249,115,22,0.3) !important;
 }
-
 .stButton > button:hover {
-    background: #ea6c0a !important;
+    opacity: 0.92 !important;
     transform: translateY(-1px) !important;
-    box-shadow: 0 8px 25px rgba(249,115,22,0.35) !important;
+}
+.stButton > button:active {
+    transform: translateY(0px) !important;
 }
 
-footer {visibility: hidden;}
-#MainMenu {visibility: hidden;}
+/* ── divider ── */
+hr {
+    border: none !important;
+    border-top: 1px solid #1e2433 !important;
+    margin: 1.5rem 0 !important;
+}
+
+/* ── result card ── */
+.result-card {
+    background: linear-gradient(135deg, #111827, #0f172a);
+    border: 1.5px solid #f97316;
+    border-radius: 18px;
+    padding: clamp(1.25rem, 5vw, 2rem);
+    text-align: center;
+    margin-top: 1.5rem;
+    box-shadow: 0 8px 32px rgba(249,115,22,0.12);
+}
+.result-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+.result-price {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 9vw, 3.5rem);
+    font-weight: 800;
+    color: #f97316;
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+.result-sub {
+    font-size: clamp(0.78rem, 2.5vw, 0.88rem);
+    color: #475569;
+    margin-bottom: 1.25rem;
+    word-break: break-word;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+.stat-box {
+    background: #1e2433;
+    border-radius: 12px;
+    padding: 0.75rem 0.5rem;
+}
+.stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(0.95rem, 3.5vw, 1.2rem);
+    font-weight: 700;
+    color: #e2e8f0;
+}
+.stat-lbl {
+    font-size: clamp(0.62rem, 2vw, 0.72rem);
+    color: #475569;
+    margin-top: 3px;
+}
+
+/* ── columns responsive on mobile ── */
+@media screen and (max-width: 480px) {
+    [data-testid="column"] {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+/* ── warning box ── */
+.stAlert {
+    background: #1e2433 !important;
+    border-radius: 12px !important;
+    border: 1px solid #f59e0b !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── Load model + columns ──────────────────────────────────────────────────────
+# ── Load model ────────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
     with open('banglore_home_prices_model.pickle', 'rb') as f:
         model = pickle.load(f)
     with open('columns.json', 'r') as f:
         data = json.load(f)
-        # handle both formats
-        if isinstance(data, list):
-            columns = data
-        else:
-            columns = data['data_columns']
-    locations = sorted([c.replace('location_', '') for c in columns if c.startswith('location_')])
+        columns = data if isinstance(data, list) else data['data_columns']
+    locations = sorted([
+        c.replace('location_', '')
+        for c in columns
+        if c.startswith('location_')
+    ])
     return model, columns, locations
 
 model, columns, locations = load_model()
-# ── Predict function ──────────────────────────────────────────────────────────
+
+
+# ── Predict ───────────────────────────────────────────────────────────────────
 def predict_price(location, sqft, bath, balcony, bhk):
     x = np.zeros(len(columns))
     x[columns.index('total_sqft')] = sqft
@@ -194,35 +240,27 @@ def predict_price(location, sqft, bath, balcony, bhk):
     return round(model.predict([x])[0], 2)
 
 
-# ── Hero ─────────────────────────────────────────────────────────────────────
+# ── Hero ──────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero">
-    <h1>Bengaluru <span>House Price</span><br>Predictor</h1>
-    <p>Linear Regression · 5,600+ listings · 254 locations</p>
-</div>
+<div class="hero-title">🏠 Bengaluru <span>House Price</span> Predictor</div>
+<div class="hero-sub">Linear Regression &nbsp;·&nbsp; 5,600+ listings &nbsp;·&nbsp; 254 locations &nbsp;·&nbsp; R² = 0.87</div>
 """, unsafe_allow_html=True)
 
 
-# ── Input form ────────────────────────────────────────────────────────────────
-st.markdown('<div class="card">', unsafe_allow_html=True)
-st.markdown("#### 📍 Property Details")
+# ── Inputs ────────────────────────────────────────────────────────────────────
+location = st.selectbox("📍 Location", ["Select a location..."] + locations)
 
-location = st.selectbox("Location", ["Select a location..."] + locations)
+sqft = st.number_input("📐 Total Sqft", min_value=300, max_value=10000, value=1200, step=50)
 
 col1, col2 = st.columns(2)
 with col1:
-    sqft = st.number_input("Total Sqft", min_value=300, max_value=10000, value=1200, step=50)
+    bhk = st.selectbox("🛏️ BHK", [1, 2, 3, 4, 5, 6])
 with col2:
-    bhk = st.selectbox("BHK", [1, 2, 3, 4, 5, 6])
+    bath = st.selectbox("🚿 Bathrooms", [1, 2, 3, 4, 5, 6])
 
-col3, col4 = st.columns(2)
-with col3:
-    bath = st.selectbox("Bathrooms", [1, 2, 3, 4, 5, 6])
-with col4:
-    balcony = st.selectbox("Balconies", [0, 1, 2, 3])
+balcony = st.selectbox("🪟 Balconies", [0, 1, 2, 3])
 
 predict_btn = st.button("🔍 Predict Price")
-st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── Result ────────────────────────────────────────────────────────────────────
@@ -231,35 +269,33 @@ if predict_btn:
         st.warning("Please select a location first!")
     else:
         price = predict_price(location, sqft, bath, balcony, bhk)
-        price_per_sqft = round((price * 100000) / sqft)
+        ppsf  = round((price * 100000) / sqft)
 
         st.markdown(f"""
-        <div class="result-box">
-            <div class="label">Estimated Price</div>
-            <div class="price">₹{price} L</div>
-            <div class="sub">{location} · {bhk} BHK · {sqft} sqft</div>
-            <div class="stat-row">
-                <div class="stat">
-                    <div class="s-val">₹{price_per_sqft:,}</div>
-                    <div class="s-label">per sqft</div>
+        <div class="result-card">
+            <div class="result-label">Estimated Price</div>
+            <div class="result-price">₹{price} L</div>
+            <div class="result-sub">{location} &nbsp;·&nbsp; {bhk} BHK &nbsp;·&nbsp; {sqft} sqft</div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-val">₹{ppsf:,}</div>
+                    <div class="stat-lbl">per sqft</div>
                 </div>
-                <div class="stat">
-                    <div class="s-val">{bath}</div>
-                    <div class="s-label">bathrooms</div>
+                <div class="stat-box">
+                    <div class="stat-val">{bath}</div>
+                    <div class="stat-lbl">bathrooms</div>
                 </div>
-                <div class="stat">
-                    <div class="s-val">{balcony}</div>
-                    <div class="s-label">balconies</div>
+                <div class="stat-box">
+                    <div class="stat-val">{balcony}</div>
+                    <div class="stat-lbl">balconies</div>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-
-# ── Footer info ───────────────────────────────────────────────────────────────
-st.markdown("<hr class='divider'>", unsafe_allow_html=True)
+st.markdown("<hr>", unsafe_allow_html=True)
 st.markdown("""
-<p style='text-align:center; color:#374151; font-size:0.78rem;'>
-    Built with Linear Regression · Bengaluru Housing Dataset · Mean R² = 0.87
+<p style='text-align:center;color:#334155;font-size:0.75rem;'>
+    Built by Shashank &nbsp;·&nbsp; Bengaluru Housing Dataset &nbsp;·&nbsp; ML Beginner Project
 </p>
 """, unsafe_allow_html=True)
